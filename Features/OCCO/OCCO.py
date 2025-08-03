@@ -96,6 +96,7 @@ class OCCO:
         co = OCCO.cor(co, g)
         co = OCCO.cor(co, g)
         CO = OCCO.exp(co, g)
+        print(f"CO = {CO.shape}, OC = {OC.shape}")
         MC = normalized_list - 0.5 * (OC + CO)  # 修改过，之前写错OC-CO
         # 使用 Min-Max 归一化
         min_val = np.min(MC)
