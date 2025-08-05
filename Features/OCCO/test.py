@@ -1,8 +1,3 @@
-"""
-OCCO特征提取测试代码
-使用OCCO.py中的算法读取和处理单个ECG文件
-"""
-
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,63 +5,41 @@ import json
 import pandas as pd
 from OCCO import OCCO
 
+# 设置中文显示
+plt.rcParams["font.family"] = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC"]
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+
 
 def get_data(filename):
-    """
-    读取JSON文件并提取ECG数据
-    
-    Args:
-        filename (str): JSON文件路径
-    
-    Returns:
-        tuple: (processed_leads, raw_leads) 处理后的数据和原始数据
-    """
+    """读取JSON文件并提取ECG数据（保持不变）"""
     try:
-        # 读取JSON文件
         with open(filename, 'r') as f:
             ecg_data = json.load(f)
 
-        # 解析嵌套结构: beats -> 编号 -> 导联数据
         if "beats" not in ecg_data:
             print("错误: JSON文件中未找到外层的'beats'关键字")
             return None, None
 
         beat_content = ecg_data["beats"]
-
-        # 初始化存储结果的字典
         raw_leads = {}
         processed_leads = {}
+        leads = ['I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
 
-        # 十二导联的标准名称
-        leads = ['I', 'II', 'III', 'AVR', 'AVL', 'AVF',
-                 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
-
-        # 遍历beat下的所有编号（如001, 002等）
         for beat_id, beat_data in beat_content.items():
-            # 处理当前心跳编号下的各导联数据
             for lead in leads:
-                # 检查导联是否存在于当前beat数据中
                 if lead in beat_data:
-                    # 获取该导联的数据
                     lead_data = beat_data[lead]
-
-                    # 处理数据格式
                     if isinstance(lead_data, str):
-                        # 字符串格式: 浮点数间用空格分隔
                         data_values = list(map(float, lead_data.split()))
                     elif isinstance(lead_data, list):
-                        # 列表格式: 直接转换为浮点数
                         data_values = [float(val) for val in lead_data]
                     else:
                         print(f"警告: 导联 {lead} 在beat {beat_id} 中的数据格式不支持")
                         continue
 
-                    # 转换为pandas Series，使用"导联_心跳编号"作为键
                     key = f"{lead}_{beat_id}"
                     raw_series = pd.Series(data_values)
                     raw_leads[key] = raw_series
-
-                    # 应用OCCO处理
                     processed_series = OCCO.MC(raw_series)
                     processed_leads[key] = processed_series
                 else:
@@ -78,128 +51,123 @@ def get_data(filename):
 
         return processed_leads, raw_leads
 
-    except FileNotFoundError:
-        print(f"错误: 文件 '{filename}' 未找到")
-        return None, None
-    except json.JSONDecodeError:
-        print(f"错误: 文件 '{filename}' 不是有效的JSON格式")
-        return None, None
     except Exception as e:
         print(f"处理数据时发生错误: {str(e)}")
         return None, None
 
 
 def test_single_file(file_path):
-    """
-    测试单个ECG文件的处理
-    
-    Args:
-        file_path (str): JSON文件路径
-    """
+    """测试单个ECG文件的处理（调用三行四列可视化）"""
     print(f"正在处理文件: {file_path}")
     print("=" * 50)
-    
-    # 读取和处理数据
+
     processed_leads, raw_leads = get_data(file_path)
-    
+
     if processed_leads is None or raw_leads is None:
         print("文件处理失败，请检查文件路径和格式")
         return
-    
+
     print(f"成功处理 {len(processed_leads)} 个导联数据")
     print(f"导联列表: {list(processed_leads.keys())}")
     print()
-    
-    # 选择第一个导联进行详细分析
-    first_lead_key = list(processed_leads.keys())[0]
-    raw_data = raw_leads[first_lead_key]
-    processed_data = processed_leads[first_lead_key]
-    
-    print(f"分析导联: {first_lead_key}")
-    print(f"原始数据长度: {len(raw_data)}")
-    print(f"处理后数据长度: {len(processed_data)}")
-    print(f"原始数据范围: [{raw_data.min():.4f}, {raw_data.max():.4f}]")
-    print(f"处理后数据范围: [{processed_data.min():.4f}, {processed_data.max():.4f}]")
-    print()
-    
+
+    # 提取十二导联数据（按三行四列顺序）
+    standard_leads = ['I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+    beat_id = list(processed_leads.keys())[0].split('_')[1]  # 获取第一个心跳的ID
+    lead_data = {}
+    for lead in standard_leads:
+        key = f"{lead}_{beat_id}"
+        if key in raw_leads and key in processed_leads:
+            lead_data[lead] = {
+                'raw': raw_leads[key],
+                'processed': processed_leads[key]
+            }
+        else:
+            print(f"警告: 未找到导联 {lead} 的数据，可能影响可视化")
+
     # 保存处理结果
     output_dir = "test_output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
-    # 保存处理后的数据为CSV
+    os.makedirs(output_dir, exist_ok=True)
     for lead_name, data in processed_leads.items():
         csv_filename = f"{output_dir}/{lead_name}_occo.csv"
         data.to_csv(csv_filename, index=False)
         print(f"数据已保存到: {csv_filename}")
-    
-    # 可视化结果
-    visualize_results(raw_data, processed_data, first_lead_key)
-    
+
+    # 可视化三行四列布局的十二导联
+    visualize_twelve_leads(lead_data, beat_id, output_dir)
+
     return processed_leads, raw_leads
 
 
-def visualize_results(raw_data, processed_data, lead_name):
-    """
-    可视化原始数据和处理后的数据
-    
-    Args:
-        raw_data (pd.Series): 原始ECG数据
-        processed_data (pd.Series): 处理后的OCCO数据
-        lead_name (str): 导联名称
-    """
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-    
-    # 绘制原始ECG信号
-    ax1.plot(raw_data.index, raw_data.values, 'b-', linewidth=0.8)
-    ax1.set_title(f'原始ECG信号 - {lead_name}')
-    ax1.set_ylabel('幅值')
-    ax1.grid(True, alpha=0.3)
-    
-    # 绘制OCCO处理后的信号
-    ax2.plot(processed_data.index, processed_data.values, 'r-', linewidth=0.8)
-    ax2.set_title(f'OCCO处理后信号 - {lead_name}')
-    ax2.set_xlabel('采样点')
-    ax2.set_ylabel('归一化幅值')
-    ax2.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
+def visualize_twelve_leads(lead_data, beat_id, output_dir):
+    """三行四列布局的十二导联可视化（原始+处理后信号）"""
+    # 创建3行4列的子图（临床常用布局）
+    fig, axes = plt.subplots(3, 4, figsize=(20, 12), sharex=True)  # 宽度20，高度12更适合三行布局
+    fig.suptitle(f'十二导联ECG信号对比（原始 vs OCCO处理后）- 心跳ID: {beat_id}', fontsize=16)
+
+    # 三行四列的导联顺序（按临床习惯排列）
+    lead_order = [
+        ['I', 'II', 'III', 'AVR'],  # 第一行：标准肢体导联+AVR
+        ['AVL', 'AVF', 'V1', 'V2'],  # 第二行：加压肢体导联+胸导联V1-V2
+        ['V3', 'V4', 'V5', 'V6']  # 第三行：胸导联V3-V6
+    ]
+
+    for row in range(3):
+        for col in range(4):
+            lead_name = lead_order[row][col]
+            ax = axes[row, col]  # 当前子图
+
+            # 处理缺失导联数据的情况
+            if lead_name not in lead_data:
+                ax.text(0.5, 0.5, f"无{lead_name}数据", ha='center', va='center', fontsize=10)
+                ax.set_title(lead_name, fontsize=12)
+                continue
+
+            # 获取原始和处理后数据
+            raw_data = lead_data[lead_name]['raw']
+            processed_data = lead_data[lead_name]['processed']
+
+            # 绘制原始信号（蓝色）
+            # ax.plot(raw_data.index, raw_data.values, 'b-', linewidth=0.7, alpha=0.8, label='原始信号')
+
+            # 处理后信号缩放+偏移（避免与原始信号重叠）
+            raw_range = raw_data.max() - raw_data.min()
+            offset = raw_range * 0.15  # 偏移量为原始信号范围的15%
+            # 将处理后信号（归一化到[0,1]）缩放至原始信号范围，并下移偏移量
+            processed_scaled = processed_data * raw_range + (raw_data.min() - offset)
+            ax.plot(processed_data.index, processed_scaled, 'r-', linewidth=0.7, alpha=0.8, label='OCCO处理后')
+
+            # 美化子图
+            ax.set_title(lead_name, fontsize=12)
+            ax.grid(True, alpha=0.3, linestyle='--')
+            ax.legend(fontsize=8, loc='upper right')
+            ax.tick_params(axis='both', labelsize=8)  # 缩小刻度字体
+
+    # 统一设置x轴标签（仅底部行）
+    for col in range(4):
+        axes[2, col].set_xlabel('采样点', fontsize=10)
+
+    # 调整布局（预留标题空间，避免子图重叠）
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # rect参数：[左, 下, 右, 上]，预留顶部5%给标题
     plt.show()
-    
+
     # 保存图像
-    output_dir = "test_output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
-    plt.savefig(f"{output_dir}/{lead_name}_comparison.png", dpi=300, bbox_inches='tight')
-    print(f"图像已保存到: {output_dir}/{lead_name}_comparison.png")
-
-
-
+    img_path = f"{output_dir}/十二导联对比_三行四列_beat{beat_id}.png"
+    plt.savefig(img_path, dpi=300, bbox_inches='tight')
+    print(f"十二导联图像已保存到: {img_path}")
 
 
 def main():
-    """
-    主测试函数
-    """
-    print("OCCO特征提取测试程序")
+    print("OCCO特征提取测试程序（三行四列十二导联可视化）")
     print("=" * 50)
-    
-    # 测试文件处理
-    # 请将下面的文件路径替换为实际的JSON文件路径
-    test_file_path = "..\\..\\梁定旭_denoised.json"  # 请修改为实际文件路径
-    
+
+    test_file_path = "梁定旭_denoised.json"  # 替换为实际文件路径
+
     if os.path.exists(test_file_path):
-        processed_leads, raw_leads = test_single_file(test_file_path)
-        
-        # 处理结果已在test_single_file函数中保存和可视化
-        pass
+        test_single_file(test_file_path)
     else:
         print(f"测试文件不存在: {test_file_path}")
-        print("请修改test_file_path变量为实际的JSON文件路径")
 
 
 if __name__ == "__main__":
     main()
-
-

@@ -150,8 +150,8 @@ def batch_process_ecg_data(input_root: str, output_root: str) -> None:
 
 if __name__ == "__main__":
     # 配置输入输出目录
-    INPUT_DIRECTORY = "F:\extracted_beats_unified"  # 替换为你的输入根目录
-    OUTPUT_DIRECTORY = "F:\heartbeat_csv"  # 替换为你的输出根目录
+    INPUT_DIRECTORY = "E:\PythonCode\PVST-GRU\Features\\NEOFeat\\folder_output\\negative"  # 替换为你的输入根目录
+    OUTPUT_DIRECTORY = "F:\heartbeat_csv\\NEO"  # 替换为你的输出根目录
 
     # 执行批量处理
     batch_process_ecg_data(INPUT_DIRECTORY, OUTPUT_DIRECTORY)

@@ -84,7 +84,7 @@ class OCCO:
         normalized_series = pd.Series(normalized_data.flatten())
         normalized_list = normalized_series.tolist()
         # 生成正半波正弦信号
-        m = np.linspace(0, 1, 50)  # 从0到1秒，分成1000个点
+        m = np.linspace(0, 1, 115)  # 从0到1秒，分成1000个点
         # 生成正半波正弦信号
         g = 1 * np.sin(np.pi * m)
         g = g.tolist()

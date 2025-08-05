@@ -45,8 +45,8 @@ class PSR:
     def ED(x):
         x = x.values
         # 设置延迟和维度
-        lag = 30  # 绘制ECG_v5时间序列的自相关函数图估计出的合适值
-        dimension = 10  # 根据最小平均互信息法找到合适的嵌入维度
+        lag = 22  # 绘制ECG_v5时间序列的自相关函数图估计出的合适值
+        dimension = 20  # 根据最小平均互信息法找到合适的嵌入维度
         # 相空间重构
         embedded_series = PSR.time_delay_embedding(x, lag, dimension)
         # 计算欧氏距离序列
@@ -54,7 +54,7 @@ class PSR:
         '''插值'''
         # 在新的数据点位置上进行插值
         old_indices = np.arange(len(distance_sequence))
-        new_indices = np.linspace(0, len(distance_sequence) - 1, 500)
+        new_indices = np.linspace(0, len(distance_sequence) - 1, 757)
         result = np.interp(new_indices, old_indices, distance_sequence)
         return pd.Series(result)
 
